@@ -4,8 +4,7 @@ const axios = require("axios");
 const SERVICE_B_URL =
   process.env.SERVICE_B_URL || "http://localhost:3001/analyze";
 const TEXT_TO_ANALYZE =
-  process.env.TEXT_TO_ANALYZE ||
-  "Eu estou muito feliz com essa compra, foi maravilhoso!";
+  process.env.TEXT_TO_ANALYZE || "Perfeito! Adorei o produto!.";
 
 async function run() {
   try {
