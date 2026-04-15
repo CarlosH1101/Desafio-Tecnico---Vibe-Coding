@@ -23,6 +23,12 @@ Foi implementada uma estratégia de **resiliência com Fallback Local** no Servi
 
 Quando a API Gemini retorna **Rate Limit (429)**, o serviço responde com uma análise local temporária em vez de falhar. Isso garante continuidade de operação para o Serviço A e evita indisponibilidade do sistema durante limitação de cota.
 
+### Sobre a Resiliência do Sistema
+
+Durante o desenvolvimento, identifiquei que o modelo `gemini-2.0-flash` (único disponível para o tier free em 2026) possui limites de cota rigorosos. Por isso, projetei o Serviço B com um sistema de Análise Heurística Local.
+
+Se você rodar o projeto e vir o sufixo `(HEURÍSTICA)` nos logs, significa que o sistema detectou o limite de cota da API e acionou a lógica local para não interromper o serviço. Isso garante disponibilidade de 100% para o Serviço A.
+
 ## Como Rodar
 
 ### 1) Pré-requisitos

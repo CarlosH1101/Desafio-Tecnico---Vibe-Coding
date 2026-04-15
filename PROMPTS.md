@@ -100,6 +100,8 @@ Depois de resolver o fluxo principal, apareceu a limitação de cota da API. A d
 - Contrato de resposta preservado mesmo em degradação.
 - Continuidade operacional entre os serviços.
 
+Nota: Durante a fase de testes intensivos, implementei um status específico de API_LIMIT_REACHED para monitorar o estouro de cota do Tier Gratuito do Gemini, garantindo que o sistema identifique gargalos de infraestrutura externa.
+
 ## 7. Refinamento Final para Entrega
 
 Na reta final, priorizei limpeza do código e previsibilidade dos logs para deixar o comportamento fácil de validar por terceiros.
