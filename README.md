@@ -1,17 +1,38 @@
 ﻿# Desafio Técnico: Vibe Coding - Análise de Sentimento
 
+## Descrição
+
+Sistema de análise de sentimento construído com arquitetura de microsserviços e integração com Google Gemini AI.
+
+A solução separa responsabilidades entre um serviço de orquestração de requisições e um serviço dedicado ao processamento de IA, com foco em robustez operacional e tratamento de falhas.
+
 ## Arquitetura
 
 O projeto está dividido em dois serviços independentes:
 
-- **Serviço A (Sender)**: cliente em Node.js responsável por enviar um texto para análise.
-- **Serviço B (Processor)**: API em Node.js que recebe o texto em `POST /analyze`, consulta o Gemini e retorna o sentimento em JSON.
+- **Serviço A (Node.js/Express)**: atua como orquestrador. Envia texto para análise, recebe a resposta do Serviço B e exibe o resultado final.
+- **Serviço B (Node.js/Express)**: atua como integrador de IA. Recebe o texto, consulta o Google Gemini, valida entradas, trata erros e retorna o sentimento.
 
-Fluxo: **Serviço A -> Serviço B -> Gemini -> Serviço B -> Serviço A**.
+Fluxo principal:
 
-## Instalação
+`Serviço A -> Serviço B -> Gemini -> Serviço B -> Serviço A`
 
-Instale as dependências em **ambas** as pastas:
+## Destaque Técnico
+
+Foi implementada uma estratégia de **resiliência com Fallback Local** no Serviço B.
+
+Quando a API Gemini retorna **Rate Limit (429)**, o serviço responde com uma análise local temporária em vez de falhar. Isso garante continuidade de operação para o Serviço A e evita indisponibilidade do sistema durante limitação de cota.
+
+## Como Rodar
+
+### 1) Pré-requisitos
+
+- Node.js 18+
+- npm
+
+### 2) Instalação
+
+Instale as dependências em cada serviço:
 
 ```bash
 cd servico-a
@@ -19,38 +40,51 @@ npm install
 ```
 
 ```bash
-cd servico-b
+cd ../servico-b
 npm install
 ```
 
-## Configuração
+### 3) Configuração de ambiente
 
-No **Serviço B**, configure o arquivo de ambiente:
-
-1. Renomeie `servico-b/.env.example` para `servico-b/.env`.
-2. Preencha a chave do Gemini no arquivo `.env`:
+No Serviço B, crie o arquivo `.env` a partir de `.env.example` e configure a chave do Gemini:
 
 ```env
-GEMINI_API_KEY=sua_chave_aqui
+GEMINI_API_KEY=sua_chave_google_gemini
 PORT=3001
 ```
 
-## Execução
+Opcionalmente, no Serviço A você pode definir:
 
-Execute os dois serviços simultaneamente em terminais separados.
+```env
+SERVICE_B_URL=http://localhost:3001/analyze
+TEXT_TO_ANALYZE=Este produto é excelente e me deixou muito satisfeito.
+```
 
-Terminal 1 (Processor):
+### 4) Execução
+
+Execute os dois serviços em terminais separados.
+
+Terminal 1 - Serviço B:
 
 ```bash
 cd servico-b
 node index.js
 ```
 
-Terminal 2 (Sender):
+Terminal 2 - Serviço A:
 
 ```bash
 cd servico-a
 node index.js
 ```
 
-Se tudo estiver correto, o Serviço A exibirá a análise recebida do Serviço B.
+Resultado esperado no Serviço A:
+
+`Análise concluída: [SENTIMENTO]`
+
+## Tecnologias
+
+- Node.js
+- Express
+- Axios
+- Google Generative AI SDK (`@google/generative-ai`)

@@ -1,56 +1,121 @@
 ﻿# PROMPTS.md
 
-## Introdução
+## Registro Técnico de Prompts
 
-Este desafio foi desenvolvido com abordagem de **Vibe Coding**, usando IA como copiloto técnico para reduzir tempo de implementação e aumentar consistência entre serviços. A IA foi utilizada para acelerar tarefas de estruturação, geração de código base e refinamento de robustez, enquanto as decisões de arquitetura e critérios de qualidade permaneceram guiados por engenharia.
+Este documento resume, de forma objetiva, como usei IA para acelerar a entrega do desafio de análise de sentimento em arquitetura de microsserviços. A ideia não foi só “gerar código”, mas usar os prompts para direcionar decisões técnicas, resolver incidentes reais de integração e manter o sistema funcional mesmo sob instabilidade externa.
 
-## Log de Prompts
+## 1. Estrutura Inicial do Projeto
 
-### 1) Configuração da estrutura do projeto
+Comecei definindo uma separação clara de responsabilidades entre os serviços para evitar acoplamento precoce e facilitar debug.
 
-**Objetivo:** criar uma base simples, separando responsabilidades entre envio e processamento.
+### Prompt principal
 
-**Prompt principal:**
+> "Estruture um projeto Node.js com dois serviços independentes: servico-a (sender) e servico-b (processor), cada um com seu próprio package.json, index.js e suporte a variáveis de ambiente via .env."
 
-> "Estruture um projeto Node.js com dois serviços independentes: `servico-a` (sender) e `servico-b` (processor). Cada serviço deve ter seu próprio `package.json`, `index.js` e suporte a variáveis de ambiente via `.env`."
+### Resultado técnico
 
-**Resultado esperado:**
-- Organização em duas pastas independentes.
-- Isolamento de dependências por serviço.
-- Base pronta para evolução e testes locais.
+- Base organizada em duas aplicações isoladas.
+- Dependências desacopladas.
+- Fluxo pronto para evolução incremental.
 
-### 2) Geração do Serviço B (Processor) com integração ao Gemini
+## 2. Implementação do Serviço B (Processor)
 
-**Objetivo:** implementar o endpoint de análise de sentimento usando IA generativa.
+A segunda etapa foi construir o endpoint de análise com integração ao Gemini, padronizando o retorno para consumo pelo Serviço A.
 
-**Prompt principal:**
+### Prompt principal
 
-> "Gere o `index.js` do Serviço B em Node.js com Express. Crie o endpoint `POST /analyze` que receba um texto, consulte a API Gemini via `@google/generative-ai` usando `GEMINI_API_KEY` no `.env`, e retorne JSON com o sentimento identificado."
+> "Gere o index.js do Serviço B em Node.js com Express. Crie o endpoint POST /analyze que receba um texto, consulte o Gemini usando GEMINI_API_KEY e retorne JSON com o sentimento identificado."
 
-**Resultado esperado:**
-- API HTTP funcional para processamento de texto.
-- Integração com Gemini encapsulada no Serviço B.
-- Retorno padronizado em JSON para consumo do Serviço A.
+### Resultado técnico
 
-### 3) Geração do Serviço A (Sender) com foco em erros e resiliência
+- Endpoint `/analyze` funcional.
+- Integração com IA encapsulada no serviço de processamento.
+- Contrato de resposta JSON definido para integração.
 
-**Objetivo:** consumir o Serviço B com segurança e evitar falhas em cascata.
+## 3. Implementação do Serviço A (Sender)
 
-**Prompt principal:**
+Depois, foquei no cliente/orquestrador para enviar texto ao Processor e tratar falhas sem travar execução.
 
-> "Gere o `index.js` do Serviço A em Node.js usando `axios` e `dotenv`. O script deve enviar texto para `http://localhost:3001/analyze`. Se receber JSON de sentimento, exiba `Análise concluída: [SENTIMENTO]`. Se o Serviço B estiver fora do ar, exiba `Erro: Não foi possível conectar ao processador de IA`. Se a resposta não for JSON válido, trate esse erro também."
+### Prompt principal
 
-**Resultado esperado:**
-- Cliente simples para envio de requisição ao processador.
-- Tratamento explícito de indisponibilidade do Serviço B.
-- Tratamento de resposta inválida sem travar execução.
+> "Gere o index.js do Serviço A em Node.js usando axios e dotenv. Envie texto para http://localhost:3001/analyze. Se receber JSON válido, exiba 'Análise concluída: [SENTIMENTO]'. Se o Serviço B estiver fora do ar, trate o erro com mensagem clara."
 
-## Tomadas de Decisão
+### Resultado técnico
 
-Durante a implementação, priorizamos **Error Handling** como requisito técnico central do MVP. A decisão foi garantir que o Serviço A não travasse quando o Serviço B estivesse offline, degradando de forma controlada com mensagens de erro claras.
+- Chamada HTTP padronizada do A para o B.
+- Tratamento explícito de indisponibilidade.
+- Mensagens de erro objetivas para operação local.
 
-Essa escolha aumentou a resiliência do fluxo ponta a ponta e reduziu risco operacional em cenários reais de instabilidade de rede, timeout ou indisponibilidade temporária do processador de IA.
+## 4. Hardening de Validação e Histórico
+
+Com o fluxo básico pronto, adicionei validações de entrada e persistência de rastreabilidade para facilitar auditoria e troubleshooting.
+
+### Prompt principal
+
+> "Adicione validação no Serviço B: campo text obrigatório, sem conteúdo vazio e limite de 500 caracteres. Em caso de erro, retorne 400 com mensagem clara."
+
+### Prompt complementar
+
+> "Salve cada requisição e resposta no history.json usando fs/promises, incluindo timestamp, texto_original e sentimento, com tratamento para arquivo inexistente e JSON corrompido."
+
+### Resultado técnico
+
+- Proteção contra payload inválido/abusivo.
+- Histórico persistente de execução.
+- Robustez em cenários de arquivo ausente ou corrompido.
+
+## 5. Debug de Integração com Gemini (404)
+
+Na etapa seguinte, enfrentei o maior bloqueio: erro 404 recorrente na chamada de modelo. O trabalho aqui foi iterativo, com prompts orientados para diagnóstico e simplificação.
+
+### Prompt principal
+
+> "O erro 404 persiste. Refatore a inicialização para usar o padrão oficial do SDK @google/generative-ai, com getGenerativeModel({ model: '...' }) e sem configuração manual de apiVersion beta."
+
+### Prompt de diagnóstico
+
+> "Adicione log da resposta bruta do Gemini e um try/catch específico na extração para identificar exatamente qual parte da resposta está faltando."
+
+### Resultado técnico
+
+- Inicialização estabilizada no padrão oficial do SDK.
+- Melhoria de observabilidade no ponto crítico de extração da resposta.
+- Redução do ruído de hipóteses durante o debug.
+
+## 6. Resiliência para Rate Limit (429)
+
+Depois de resolver o fluxo principal, apareceu a limitação de cota da API. A decisão foi priorizar continuidade do sistema para avaliação, sem depender 100% da disponibilidade externa.
+
+### Prompt principal
+
+> "Atingi erro 429 no Gemini. Implemente fallback local para que o Serviço B retorne uma análise temporária em JSON, garantindo que o Serviço A nunca quebre."
+
+### Prompt de compatibilidade
+
+> "O Serviço A ainda reporta JSON inválido. Ajuste o fallback para responder sempre com Content-Type application/json e payload consistente."
+
+### Resultado técnico
+
+- Fallback local ativado para cenários de cota excedida.
+- Contrato de resposta preservado mesmo em degradação.
+- Continuidade operacional entre os serviços.
+
+## 7. Refinamento Final para Entrega
+
+Na reta final, priorizei limpeza do código e previsibilidade dos logs para deixar o comportamento fácil de validar por terceiros.
+
+### Prompt principal
+
+> "Remova logs de debug desnecessários, mantenha logs essenciais de status/erro, organize a identação e adicione comentários curtos explicando o fallback."
+
+### Resultado técnico
+
+- Código mais legível e objetivo.
+- Menos ruído no terminal.
+- Base pronta para avaliação técnica.
 
 ## Conclusão
 
-A colaboração com IA permitiu acelerar as etapas de design e implementação, mantendo foco em qualidade técnica e previsibilidade de comportamento. Como resultado, foi possível entregar um **MVP funcional e resiliente** em tempo recorde, com separação clara de responsabilidades, integração com modelo generativo e tratamento de falhas essenciais para operação confiável.
+O uso de prompts foi tratado como ferramenta de engenharia, não como atalho cego. Cada iteração foi guiada por sintomas reais (404, 429, parse de resposta, contrato JSON), até chegar em um MVP funcional, resiliente e com comportamento previsível entre microsserviços.
+
+Em resumo, os prompts aceleraram implementação, debug e documentação sem perder controle técnico sobre arquitetura, tratamento de erro e qualidade de entrega.
